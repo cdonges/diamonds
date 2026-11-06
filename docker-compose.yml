@@ -1,0 +1,10 @@
+services:
+  app:
+    build:
+      context: .
+    container_name: diamonds-online
+    ports:
+      - "3100:3000"
+    environment:
+      - PORT=3000
+    restart: unless-stopped

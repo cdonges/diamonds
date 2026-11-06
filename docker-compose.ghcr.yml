@@ -1,0 +1,16 @@
+services:
+  app:
+    image: ghcr.io/OWNER/REPO:latest
+    container_name: diamonds-online
+    ports:
+      - "3100:3000"
+    environment:
+      - PORT=3000
+    restart: unless-stopped
+
+# Replace OWNER/REPO with your GitHub namespace and repository name.
+# Example:
+# image: ghcr.io/cdonges/diamonds:latest
+#
+# Run with:
+# docker compose -f docker-compose.ghcr.yml up -d

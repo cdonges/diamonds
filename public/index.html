@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Diamonds Online</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Card table</p>
+          <h1>Diamonds Online</h1>
+        </div>
+        <div class="topbar-actions">
+          <div class="topbar-badge">Lobby</div>
+          <a class="rules-link" href="/rules" target="_blank" rel="noreferrer">Rules</a>
+        </div>
+      </header>
+
+      <main class="main-grid">
+        <section id="lobby-view" class="panel visible">
+          <div class="panel-header">
+            <h2>Create a table</h2>
+          </div>
+
+          <form id="create-room-form" class="room-form">
+            <label>
+              Room name
+              <input id="room-name" type="text" maxlength="32" value="Friendly Game" />
+            </label>
+
+            <label>
+              Your name
+              <input id="player-name" type="text" maxlength="20" value="Player 1" />
+            </label>
+
+            <label>
+              AI opponents (1 human + up to 2 AI)
+              <select id="ai-count">
+                <option value="0">0</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+              </select>
+            </label>
+
+            <div class="ai-levels">
+              <label class="ai-level" data-ai-index="0">
+                AI 1 skill
+                <select id="ai-level-0">
+                  <option value="easy">Easy</option>
+                  <option value="medium" selected>Medium</option>
+                  <option value="hard">Hard</option>
+                </select>
+              </label>
+
+              <label class="ai-level" data-ai-index="1">
+                AI 2 skill
+                <select id="ai-level-1">
+                  <option value="easy">Easy</option>
+                  <option value="medium" selected>Medium</option>
+                  <option value="hard">Hard</option>
+                </select>
+              </label>
+            </div>
+
+            <button type="submit" class="primary">Create room</button>
+          </form>
+
+          <div class="room-list-box">
+            <div class="panel-header compact">
+              <h2>Open tables</h2>
+            </div>
+            <div id="room-list" class="room-list"></div>
+          </div>
+        </section>
+
+        <section id="room-view" class="panel hidden">
+          <div class="panel-header room-header">
+            <div>
+              <p class="eyebrow">Table</p>
+              <h2 id="room-name-label">Room</h2>
+            </div>
+            <span id="room-code" class="room-code">--</span>
+          </div>
+
+          <div id="seat-list" class="seat-grid"></div>
+
+          <div class="room-actions">
+            <button id="toggle-ready" class="secondary">Ready up</button>
+            <button id="start-game" class="primary">Start game</button>
+            <button id="leave-room" class="ghost">Leave</button>
+          </div>
+        </section>
+
+        <section id="game-view" class="panel hidden">
+          <div class="panel-header">
+            <h2>Table</h2>
+          </div>
+
+          <div id="scoreboard" class="scoreboard"></div>
+
+          <div class="table-area">
+            <div id="status-strip" class="status-strip">Waiting for the round to begin</div>
+            <div id="bid-panel" class="bid-panel"></div>
+            <div id="trick-board" class="trick-board"></div>
+          </div>
+
+          <div class="hand-wrap">
+            <div class="panel-header compact">
+              <h3>Your hand</h3>
+            </div>
+            <div id="hand-cards" class="hand-cards"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
+
+    <div id="joker-modal" class="modal hidden">
+      <div class="modal-panel">
+        <h3 id="joker-title">Choose Joker</h3>
+        <div class="modal-grid">
+          <label id="joker-suit-row">
+            Suit
+            <select id="joker-suit">
+              <option value="♣">♣ Clubs</option>
+              <option value="♦">♦ Diamonds</option>
+              <option value="♥">♥ Hearts</option>
+              <option value="♠">♠ Spades</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="mode-buttons">
+          <button id="joker-high" class="primary">High</button>
+          <button id="joker-low" class="primary">Low</button>
+        </div>
+
+        <div class="modal-actions">
+          <button id="joker-cancel" class="ghost">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>
