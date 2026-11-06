@@ -29,19 +29,24 @@ Then open http://localhost:3100
 
 ## Run with the published GHCR image
 
-1. Replace the placeholder image in [docker-compose.ghcr.yml](docker-compose.ghcr.yml) with your actual GHCR repo, for example:
+The GitHub Actions workflow publishes the image to `ghcr.io/cdonges/diamonds`. [docker-compose.ghcr.yml](docker-compose.ghcr.yml) uses its `latest` tag.
 
-   ```yaml
-   image: ghcr.io/cdonges/diamonds:latest
-   ```
-
-2. Start the container:
+1. Start the container:
 
    ```bash
    docker compose -f docker-compose.ghcr.yml up -d
    ```
 
-3. Open http://localhost:3100
+2. Open http://localhost:3100
+
+To update to the newest published image:
+
+```bash
+docker compose -f docker-compose.ghcr.yml pull
+docker compose -f docker-compose.ghcr.yml up -d
+```
+
+If the package is private on GitHub, log in first with `docker login ghcr.io` using a personal access token that has the `read:packages` scope, or make the package public in its GitHub package settings.
 
 ## GitHub Actions
 
