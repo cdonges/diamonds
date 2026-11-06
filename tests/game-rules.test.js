@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { validateBidTotal, bidWithAdjustment } = require('../game-rules');
+const { validateBidTotal, bidWithAdjustment } = require('../src/game-rules');
 
 test('final bid total cannot equal ten', () => {
   assert.equal(validateBidTotal({ 0: 3, 1: 3, 2: 4 }), false);
@@ -12,7 +12,7 @@ test('bid adjustments must preserve the total rule', () => {
   assert.equal(bidWithAdjustment({ 0: 3, 1: 3, 2: 2 }, 0, 1), true);
 });
 
-const { determineWinner, canPlayCard, getGameOutcome } = require('../game-rules');
+const { determineWinner, canPlayCard, getGameOutcome } = require('../src/game-rules');
 
 const card = (rank, suit, extra = {}) => ({ code: `${rank}${suit}`, rank, suit, ...extra });
 const joker = (selectedSuit, selectedMode) => ({ code: 'JOKER', rank: 'JOKER', suit: 'JOKER', selectedSuit, selectedMode });

@@ -34,7 +34,7 @@ const AI_NAMES = ["Nova", "Orbit", "Bolt", "Pixel", "Echo", "Juno", "Vega", "Bli
 app.use(express.static(path.join(__dirname, "public")));
 
 app.get("/rules", (req, res) => {
-  const rulesPath = path.join(__dirname, "rules", "diamonds-rules.md");
+  const rulesPath = path.join(__dirname, "..", "rules", "diamonds-rules.md");
 
   try {
     const markdown = fs.readFileSync(rulesPath, "utf8");
@@ -44,7 +44,7 @@ app.get("/rules", (req, res) => {
   }
 });
 
-app.use("/rules", express.static(path.join(__dirname, "rules")));
+app.use("/rules", express.static(path.join(__dirname, "..", "rules")));
 
 app.get("/health", (req, res) => {
   res.json({ ok: true, rooms: rooms.size });

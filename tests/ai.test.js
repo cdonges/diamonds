@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const ai = require('../ai');
-const { canPlayCard } = require('../game-rules');
+const ai = require('../src/ai');
+const { canPlayCard } = require('../src/game-rules');
 
 const SUITS = ['♣', '♦', '♥', '♠'];
 const RANKS = ['7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
