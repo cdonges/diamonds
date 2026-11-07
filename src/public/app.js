@@ -247,13 +247,16 @@ function renderGame(game) {
     const myPointCard = me?.pointCard || null;
     const canTakeKitty = isMyDiscardTurn && !myKittyCard;
     const canDiscard = isMyDiscardTurn && Boolean(myKittyCard) && !myPointCard;
-    const discardButtons = (game.hand || []).map((cardCode) => `
+    // The kitty card is shown (and discardable) in the kitty slot, so leave it out here.
+    const kittyInHand = Boolean(myKittyCard) && (game.hand || []).includes(myKittyCard);
+    const discardHand = sortHand((game.hand || []).filter((cardCode) => cardCode !== myKittyCard));
+    const discardButtons = discardHand.map((cardCode) => `
       <button
         class="card-button"
         data-discard="${cardCode}"
         ${canDiscard ? "" : "disabled"}
         title="Discard ${cardCode} as your point card"
-      >${cardCode}${cardCode === myKittyCard ? "<small> (kitty)</small>" : ""}</button>
+      >${cardCode}</button>
     `).join("");
     const kittyButtons = Array.from({ length: game.kittyCount || 0 }, (_, index) => `
       <button
@@ -264,7 +267,14 @@ function renderGame(game) {
       >?</button>
     `).join("");
     const kittyChoice = myKittyCard
-      ? `<div class="card-button">${escapeHtml(myKittyCard)}</div>`
+      ? kittyInHand && !myPointCard
+        ? `<button
+            class="card-button"
+            data-discard="${escapeHtml(myKittyCard)}"
+            ${canDiscard ? "" : "disabled"}
+            title="Discard ${escapeHtml(myKittyCard)} as your point card"
+          >${escapeHtml(myKittyCard)}</button>`
+        : `<div class="card-button">${escapeHtml(myKittyCard)}</div>`
       : `<div class="discard-grid">${kittyButtons}</div>`;
     const pointChoice = myPointCard
       ? `<div class="discard-choice"><small>Your point card</small><div class="card-button">${escapeHtml(myPointCard)}</div></div>`
@@ -349,35 +359,58 @@ function renderGame(game) {
     const suit = winnerCard.cardSuit || (winnerCard.cardCode === "JOKER" ? "♠" : winnerCard.cardCode.slice(-1));
     const rank = winnerCard.cardCode === "JOKER" ? (winnerCard.cardMode === "low" ? "LOW" : "HIGH") : winnerCard.cardCode.replace(/[♣♦♥♠]/g, "");
     const isRed = suit === "♥" || suit === "♦" || suit === "JOKER";
+    ui.trickBoard.style.gridTemplateColumns = "";
     ui.trickBoard.innerHTML = `
       <div class="trick-card highlight">
         <span class="meta">Winning card</span>
         <div class="card-button ${isRed ? "red" : ""} highlight" data-rank="${rank}" data-suit="${escapeHtml(suit)}" style="width: 54px; height: 72px; display: inline-flex; margin: 0 auto;">
           <span class="card-center" data-suit="${escapeHtml(suit)}"></span>
+          ${modeArrow(winnerCard.cardMode)}
         </div>
         <small>${escapeHtml(winnerCard.playerName)} played ${escapeHtml(winnerCard.cardCode)}${winnerCard.cardCode === "JOKER" && winnerCard.cardMode ? ` (${winnerCard.cardMode} ${winnerCard.cardSuit})` : winnerCard.cardMode ? ` (${winnerCard.cardMode})` : ""}</small>
       </div>
     `;
   } else {
-    const trickCards = (game.trick || []).map((entry) => {
+    // One fixed slot per player in play order (starting with the trick leader),
+    // so each card appears where it will stay once the trick is complete.
+    const trick = game.trick || [];
+    const seats = players.map((player) => player.seat).sort((a, b) => a - b);
+    const leaderSeat = trick.length ? trick[0].seat : game.currentTurn;
+    const leaderIndex = Math.max(0, seats.indexOf(leaderSeat));
+    const slotSeats = [...seats.slice(leaderIndex), ...seats.slice(0, leaderIndex)];
+    const trickBySeat = new Map(trick.map((entry) => [entry.seat, entry]));
+
+    const trickCards = slotSeats.map((seat) => {
+      const entry = trickBySeat.get(seat);
+      const playerName = players.find((player) => player.seat === seat)?.name || "Player";
+      if (!entry) {
+        return `
+          <div class="trick-card empty-slot">
+            <span class="meta">${escapeHtml(playerName)}</span>
+            <div class="card-slot"></div>
+          </div>
+        `;
+      }
       const suit = entry.cardSuit || (entry.cardCode === "JOKER" ? "♠" : entry.cardCode.slice(-1));
       const rank = entry.cardCode === "JOKER" ? (entry.cardMode === "low" ? "LOW" : "HIGH") : entry.cardCode.replace(/[♣♦♥♠]/g, "");
       const isRed = suit === "♥" || suit === "♦" || suit === "JOKER";
       const isWinner = game.phase === "trick-end" && entry.seat === game.trickWinnerSeat;
       return `
         <div class="trick-card ${isWinner ? "highlight" : ""}">
-          <span class="meta">${escapeHtml(entry.playerName || "Player")}${isWinner ? " · wins" : ""}</span>
+          <span class="meta">${escapeHtml(entry.playerName || playerName)}${isWinner ? " · wins" : ""}</span>
           <div class="card-button ${isRed ? "red" : ""} ${isWinner ? "highlight" : ""}" data-rank="${rank}" data-suit="${escapeHtml(suit)}" style="width: 54px; height: 72px; display: inline-flex; margin: 0 auto;">
             <span class="card-center" data-suit="${escapeHtml(suit)}"></span>
+            ${modeArrow(entry.cardMode)}
           </div>
         </div>
       `;
     });
 
+    ui.trickBoard.style.gridTemplateColumns = trickCards.length ? `repeat(${trickCards.length}, minmax(0, 1fr))` : "";
     ui.trickBoard.innerHTML = trickCards.length ? trickCards.join("") : '<div class="trick-card"><span class="meta">No cards</span><div>Waiting</div></div>';
   }
 
-  const myHand = game.hand || [];
+  const myHand = sortHand(game.hand || []);
   const isHumanTurn = game.currentTurn === state.mySeat && game.phase === "playing";
 
   ui.handCards.innerHTML = myHand.length
@@ -410,6 +443,34 @@ function renderGame(game) {
       socket.emit("game:play-card", { roomId: state.room.id, cardCode: button.dataset.code });
     });
   });
+}
+
+const HAND_SUIT_ORDER = { "♦": 0, "♥": 1, "♣": 2, "♠": 3 };
+const HAND_RANK_ORDER = { "A": 0, "K": 1, "Q": 2, "J": 3, "10": 4, "9": 5, "8": 6, "7": 7 };
+
+// Joker first, then diamonds, hearts, clubs, spades; each suit from ace down.
+function sortHand(cards) {
+  const key = (cardCode) => {
+    if (cardCode === "JOKER") return [-1, -1];
+    const suit = cardCode.slice(-1);
+    const rank = cardCode.slice(0, -1);
+    return [HAND_SUIT_ORDER[suit] ?? 9, HAND_RANK_ORDER[rank] ?? 99];
+  };
+  return [...cards].sort((a, b) => {
+    const [suitA, rankA] = key(a);
+    const [suitB, rankB] = key(b);
+    return suitA - suitB || rankA - rankB;
+  });
+}
+
+function modeArrow(mode) {
+  if (mode === "high") {
+    return '<span class="mode-arrow high" title="Played high" aria-label="Played high">▲</span>';
+  }
+  if (mode === "low") {
+    return '<span class="mode-arrow low" title="Played low" aria-label="Played low">▼</span>';
+  }
+  return "";
 }
 
 function showJokerDialog(cardCode) {
