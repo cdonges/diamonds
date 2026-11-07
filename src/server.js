@@ -24,6 +24,8 @@ const io = new Server(server, {
 
 const PORT = Number(process.env.PORT) || 3000;
 const TRICK_PAUSE_MS = 3000;
+const INACTIVITY_TIMEOUT_MS = 10 * 60 * 1000;
+const INACTIVITY_CHECK_MS = 60 * 1000;
 const rooms = new Map();
 const SUITS = ["♣", "♦", "♥", "♠"];
 const SUIT_ORDER = { "♣": 0, "♦": 1, "♥": 2, "♠": 3 };
@@ -266,6 +268,7 @@ function createRoom(name, maxPlayers) {
     players: [],
     game: null,
     aiTimer: null,
+    lastActivity: Date.now(),
   };
 
   rooms.set(roomId, room);
@@ -336,12 +339,47 @@ function getLobbyRooms() {
     }));
 }
 
+function touchRoom(room, now = Date.now()) {
+  if (!room) return;
+  room.lastActivity = now;
+}
+
+function shouldCloseRoom(room, now = Date.now()) {
+  if (!room) return false;
+  const lastActivity = Number(room.lastActivity ?? now);
+  return Number.isFinite(lastActivity) && now - lastActivity >= INACTIVITY_TIMEOUT_MS;
+}
+
+function closeRoom(roomId) {
+  const room = rooms.get(roomId);
+  if (!room) return false;
+
+  if (room.game?.pauseTimer) {
+    clearTimeout(room.game.pauseTimer);
+  }
+
+  io.to(room.id).emit("room:closed", { roomId: room.id, reason: "inactive" });
+  rooms.delete(roomId);
+  emitLobbyList();
+  return true;
+}
+
+function pruneInactiveRooms() {
+  const now = Date.now();
+  for (const room of [...rooms.values()]) {
+    if (shouldCloseRoom(room, now)) {
+      closeRoom(room.id);
+    }
+  }
+}
+
 function emitLobbyList() {
   io.emit("lobby:rooms", getLobbyRooms());
 }
 
 function emitRoomState(room) {
   if (!room) return;
+  touchRoom(room);
 
   const payload = {
     id: room.id,
@@ -804,6 +842,7 @@ function adjustBid(room, player, delta) {
 
 function emitGameState(room) {
   if (!room || !room.game) return;
+  touchRoom(room);
 
   const players = room.players.slice().sort((a, b) => a.seat - b.seat);
   const payload = {
@@ -1101,6 +1140,23 @@ function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
 
-server.listen(PORT, () => {
-  console.log(`Diamonds server running on http://localhost:${PORT}`);
-});
+if (require.main === module) {
+  setInterval(pruneInactiveRooms, INACTIVITY_CHECK_MS);
+  server.listen(PORT, () => {
+    console.log(`Diamonds server running on http://localhost:${PORT}`);
+  });
+}
+
+module.exports = {
+  INACTIVITY_TIMEOUT_MS,
+  shouldCloseRoom,
+  touchRoom,
+  closeRoom,
+  createRoom,
+  addPlayerToRoom,
+  sanitizeText,
+  getLobbyRooms,
+  emitLobbyList,
+  emitRoomState,
+  leaveRoom,
+};

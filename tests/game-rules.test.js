@@ -60,3 +60,11 @@ test('game ends at 100 or -100 and highest score wins', () => {
   assert.deepEqual(loss.winners, [2]);
   assert.equal(loss.reason, 'loss');
 });
+
+const { shouldCloseRoom, INACTIVITY_TIMEOUT_MS } = require('../src/server.js');
+
+test('tables close after ten minutes of inactivity', () => {
+  const now = Date.now();
+  assert.equal(shouldCloseRoom({ lastActivity: now - INACTIVITY_TIMEOUT_MS - 1 }, now), true);
+  assert.equal(shouldCloseRoom({ lastActivity: now - (INACTIVITY_TIMEOUT_MS - 1000) }, now), false);
+});
