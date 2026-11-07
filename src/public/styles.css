@@ -756,6 +756,20 @@ button:disabled {
   display: none !important;
 }
 
+.site-footer {
+  margin-top: 12px;
+  text-align: center;
+  font-size: 0.8rem;
+}
+
+.site-footer a {
+  color: var(--muted);
+}
+
+.site-footer a:hover {
+  color: var(--text);
+}
+
 /* Tricks taken in the scoreboard */
 .score-box small {
   display: block;

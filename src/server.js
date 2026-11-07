@@ -69,7 +69,7 @@ io.on("connection", (socket) => {
 
     for (let index = 0; index < aiLimit; index += 1) {
       const aiSeat = room.players.length;
-      const aiPlayer = addPlayerToRoom(room, `ai-${room.id}-${index + 1}`, createAiName(), true, aiSeat);
+      const aiPlayer = addPlayerToRoom(room, `ai-${room.id}-${index + 1}`, createAiName(room), true, aiSeat);
       aiPlayer.aiLevel = ai.normalizeLevel(Array.isArray(aiLevels) ? aiLevels[index] : undefined);
     }
 
@@ -312,9 +312,16 @@ function sanitizeText(input, fallback, maxLength) {
   return safe.slice(0, maxLength);
 }
 
-function createAiName() {
-  const seed = AI_NAMES[Math.floor(Math.random() * AI_NAMES.length)] || "Bot";
-  return `${seed} 🤖`;
+// Pick a bot name no one else at the table is already using.
+function createAiName(room) {
+  const taken = new Set(room.players.map((player) => player.name.replace(/ 🤖$/, "").trim().toLowerCase()));
+  const available = AI_NAMES.filter((name) => !taken.has(name.toLowerCase()));
+  if (available.length) {
+    return `${available[Math.floor(Math.random() * available.length)]} 🤖`;
+  }
+  let number = 1;
+  while (taken.has(`bot ${number}`)) number += 1;
+  return `Bot ${number} 🤖`;
 }
 
 function getLobbyRooms() {
@@ -375,6 +382,7 @@ function renderMarkdownPage(markdown) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Diamonds Rules</title>
     <link rel="stylesheet" href="/styles.css" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   </head>
   <body class="rules-page">
     <div class="app-shell">
@@ -393,6 +401,9 @@ function renderMarkdownPage(markdown) {
           ${bodyHtml}
         </section>
       </main>
+      <footer class="site-footer">
+        <a href="https://github.com/cdonges/diamonds" target="_blank" rel="noreferrer">View on GitHub</a>
+      </footer>
     </div>
   </body>
 </html>`;
