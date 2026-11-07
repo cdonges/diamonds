@@ -89,7 +89,20 @@ button:disabled {
   line-height: 1.2;
 }
 
+.sound-toggle {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.sound-toggle[aria-pressed="false"] {
+  color: var(--muted);
+}
+
 .topbar .topbar-badge,
+.topbar .sound-toggle,
 .topbar .rules-link {
   padding: 0.25rem 0.75rem;
   font-size: 0.85rem;
@@ -288,11 +301,33 @@ button:disabled {
   margin-top: 22px;
 }
 
-.scoreboard {
+.game-layout {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  grid-template-columns: minmax(0, 1fr) 200px;
+  gap: 18px;
+  align-items: start;
+}
+
+.game-main {
+  min-width: 0;
+}
+
+.scoreboard {
+  display: flex;
+  flex-direction: column;
   gap: 12px;
-  margin-bottom: 18px;
+}
+
+@media (max-width: 760px) {
+  .game-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .scoreboard {
+    order: -1;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  }
 }
 
 .score-box {

@@ -12,6 +12,7 @@
         <h1>Diamonds Online</h1>
         <div class="topbar-actions">
           <div class="topbar-badge">Lobby</div>
+          <button id="sound-toggle" class="sound-toggle" type="button" aria-pressed="true" title="Turn sound off">🔔 Sound on</button>
           <a class="rules-link" href="/rules" target="_blank" rel="noreferrer">Rules</a>
         </div>
       </header>
@@ -33,9 +34,9 @@
               <input id="player-name" type="text" maxlength="20" value="Player 1" />
             </label>
 
-            <label>
-              AI opponents (1 human + up to 2 AI)
-              <select id="ai-count">
+            <label title="1 human + up to 2 AI">
+              AI opponents
+              <select id="ai-count" title="1 human + up to 2 AI">
                 <option value="0">0</option>
                 <option value="1">1</option>
                 <option value="2">2</option>
@@ -93,22 +94,26 @@
 
         <section id="game-view" class="panel hidden">
           <div class="panel-header">
-            <h2>Table</h2>
+            <h2 id="game-table-name">Table</h2>
           </div>
 
-          <div id="scoreboard" class="scoreboard"></div>
+          <div class="game-layout">
+            <div class="game-main">
+              <div class="table-area">
+                <div id="status-strip" class="status-strip">Waiting for the round to begin</div>
+                <div id="bid-panel" class="bid-panel"></div>
+                <div id="trick-board" class="trick-board"></div>
+              </div>
 
-          <div class="table-area">
-            <div id="status-strip" class="status-strip">Waiting for the round to begin</div>
-            <div id="bid-panel" class="bid-panel"></div>
-            <div id="trick-board" class="trick-board"></div>
-          </div>
-
-          <div class="hand-wrap">
-            <div class="panel-header compact">
-              <h3>Your hand</h3>
+              <div class="hand-wrap">
+                <div class="panel-header compact">
+                  <h3>Your hand</h3>
+                </div>
+                <div id="hand-cards" class="hand-cards"></div>
+              </div>
             </div>
-            <div id="hand-cards" class="hand-cards"></div>
+
+            <aside id="scoreboard" class="scoreboard"></aside>
           </div>
         </section>
       </main>

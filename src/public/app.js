@@ -5,6 +5,7 @@ const ui = {
   roomView: document.getElementById("room-view"),
   lobbyView: document.getElementById("lobby-view"),
   gameView: document.getElementById("game-view"),
+  gameTableName: document.getElementById("game-table-name"),
   seatList: document.getElementById("seat-list"),
   roomNameLabel: document.getElementById("room-name-label"),
   roomCode: document.getElementById("room-code"),
@@ -25,6 +26,7 @@ const ui = {
   jokerCancel: document.getElementById("joker-cancel"),
   jokerHigh: document.getElementById("joker-high"),
   jokerLow: document.getElementById("joker-low"),
+  soundToggle: document.getElementById("sound-toggle"),
 };
 
 const state = {
@@ -33,6 +35,92 @@ const state = {
   mySeat: null,
   pendingJoker: null,
 };
+
+// --- Turn sound -----------------------------------------------------------
+const SOUND_KEY = "diamonds:sound";
+let soundEnabled = true;
+try {
+  soundEnabled = localStorage.getItem(SOUND_KEY) !== "off";
+} catch (error) {
+  soundEnabled = true;
+}
+let audioContext = null;
+let lastTurnKey = null;
+
+function getAudioContext() {
+  if (!audioContext) {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return null;
+    audioContext = new AudioCtx();
+  }
+  if (audioContext.state === "suspended") {
+    audioContext.resume().catch(() => {});
+  }
+  return audioContext;
+}
+
+// Browsers only allow audio after a user gesture, so unlock it on the first interaction.
+["pointerdown", "keydown"].forEach((eventName) => {
+  document.addEventListener(eventName, () => getAudioContext(), { once: true });
+});
+
+function playDing() {
+  if (!soundEnabled) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  const master = ctx.createGain();
+  master.gain.setValueAtTime(0.0001, now);
+  master.gain.exponentialRampToValueAtTime(0.18, now + 0.01);
+  master.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
+  master.connect(ctx.destination);
+  [[880, 1], [1760, 0.25]].forEach(([frequency, level]) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = frequency;
+    gain.gain.value = level;
+    osc.connect(gain).connect(master);
+    osc.start(now);
+    osc.stop(now + 1.25);
+  });
+}
+
+function isMyTurn(game) {
+  if (game.phase === "bidding" || game.phase === "bid-adjustment") {
+    return game.currentBidder === state.mySeat;
+  }
+  if (game.phase === "discarding" || game.phase === "playing") {
+    return game.currentTurn === state.mySeat;
+  }
+  return false;
+}
+
+// Ding once each time it becomes your turn (not on every state update).
+function checkTurnDing(game) {
+  const turnKey = isMyTurn(game) ? game.phase : null;
+  if (turnKey && turnKey !== lastTurnKey) {
+    playDing();
+  }
+  lastTurnKey = turnKey;
+}
+
+function renderSoundToggle() {
+  ui.soundToggle.textContent = soundEnabled ? "🔔 Sound on" : "🔕 Sound off";
+  ui.soundToggle.setAttribute("aria-pressed", String(soundEnabled));
+  ui.soundToggle.title = soundEnabled ? "Turn sound off" : "Turn sound on";
+}
+
+ui.soundToggle.addEventListener("click", () => {
+  soundEnabled = !soundEnabled;
+  try {
+    localStorage.setItem(SOUND_KEY, soundEnabled ? "on" : "off");
+  } catch (error) {
+    // Preference just won't persist.
+  }
+  renderSoundToggle();
+});
+renderSoundToggle();
 
 ui.jokerCancel.addEventListener("click", () => {
   hideJokerDialog();
@@ -132,6 +220,7 @@ socket.on("room:state", (room) => {
 socket.on("game:state", (game) => {
   state.game = game;
   renderGame(game);
+  checkTurnDing(game);
   showGame();
 });
 
@@ -201,12 +290,20 @@ function renderRoomState(room) {
 
 function renderGame(game) {
   const players = game.players || [];
-  ui.scoreboard.innerHTML = players
+  ui.gameTableName.textContent = game.roomName || state.room?.name || "Table";
+  // You first, then everyone else in turn order after you.
+  const scoreOrder = [...players].sort((a, b) => a.seat - b.seat);
+  const myIndex = scoreOrder.findIndex((player) => player.seat === state.mySeat);
+  if (myIndex > 0) {
+    scoreOrder.push(...scoreOrder.splice(0, myIndex));
+  }
+  ui.scoreboard.innerHTML = scoreOrder
     .map((player) => `
       <div class="score-box ${player.seat === state.mySeat ? "active" : ""}">
         <span>${escapeHtml(player.name)}${aiBadge(player)} ${player.seat === state.mySeat ? "(You)" : ""}</span>
         <strong>${player.score}</strong>
-        <small>Cards: ${player.handCount} · Bid: ${player.bid !== null && player.bid !== undefined ? player.bid : "--"}</small>
+        <small>Cards: ${player.handCount}</small>
+        <small>Bid: ${player.bid !== null && player.bid !== undefined ? player.bid : "--"}</small>
         <small class="tricks-line">Tricks: <b>${player.tricksWon ?? 0}</b></small>
       </div>
     `)
